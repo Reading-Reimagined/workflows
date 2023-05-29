@@ -1,0 +1,22 @@
+name: Mirror repository on merge
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, development, develop]
+  workflow_dispatch:
+
+jobs:
+  mirror_repo:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    steps:
+      # Run if source org is Reading-Reimagined
+      - name: Clone Repository, Delete Pull Requests, and Push to Mirror
+        if: contains(github.repository, 'Reading-Reimagined/')
+        run: |
+          REPO_NAME=${GITHUB_REPOSITORY#*/}
+          git clone --mirror https://${{secrets.GH_USER}}:${{github.token}}@github.com/${{github.repository}}.git
+          cd ${REPO_NAME}.git
+          git for-each-ref --format='delete %(refname)' refs/pull | git update-ref --stdin
+          git remote add mirror https://${{secrets.AERDF_MIRROR_REPO_PAT}}@github.com/${{secrets.TARGET_REPO}}.git
+          git push --mirror mirror
